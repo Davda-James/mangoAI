@@ -12,6 +12,7 @@ import { GoogleGenAI } from "@google/genai";
 import { exit } from "process";
 dotenv.config();
 
+const PORT = Number(process.env.PORT) || 3001;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 // new gemini client 
@@ -39,6 +40,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.get("/api/health",(req,res)=>{
+	return res.json({ status: "ok" });
+})
 
 // AI Summarization endpoint using Gemini API
 app.post("/api/summarize", async (req, res) => {
@@ -151,8 +156,8 @@ app.post("/api/send-email", async (req, res) => {
 	}
 });
 
-app.listen(3001, () => {
-	console.log("Backend server running on http://localhost:3001");
+app.listen(PORT, "0.0.0.0", () => {
+	console.log(`Backend server running on http://localhost:${PORT}`);
 });
 
 
