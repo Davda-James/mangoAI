@@ -55,7 +55,7 @@ export const TranscriptUpload = ({ transcript, setTranscript, onNext }: Transcri
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const response = await fetch("http://localhost:3001/api/upload", {
+      const response = await fetch(`${process.env.VITE_BACKEND_URL}/api/upload`, {
         method: "POST",
         body: formData,
       });
