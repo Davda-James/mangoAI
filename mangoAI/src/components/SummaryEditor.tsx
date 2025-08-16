@@ -66,19 +66,35 @@ export const SummaryEditor = ({ summary, setSummary, onBack }: SummaryEditorProp
       });
       return;
     }
-
     setIsSending(true);
-    
-    // Simulate email sending
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast({
-      title: "Emails sent successfully!",
-      description: `Summary shared with ${emailAddresses.length} recipient${emailAddresses.length > 1 ? 's' : ''}`,
-    });
-    
-    setIsSending(false);
-    setEmailAddresses([]);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients: emailAddresses,
+          subject: "Your AI Meeting Summary",
+          summary,
+        })
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Failed to send email");
+      }
+      toast({
+        title: "Emails sent successfully!",
+        description: `Summary shared with ${emailAddresses.length} recipient${emailAddresses.length > 1 ? 's' : ''}`,
+      });
+      setEmailAddresses([]);
+    } catch (err: any) {
+      toast({
+        title: "Failed to send email",
+        description: err.message || "An error occurred while sending the summary.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -123,7 +139,7 @@ export const SummaryEditor = ({ summary, setSummary, onBack }: SummaryEditorProp
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            <strong>Note:</strong> Gemini always returns summaries in Markdown format. The preview above shows the formatted result.
+            <strong>Note:</strong> AI Summarizer always returns summaries in Markdown format. The preview above shows the formatted result.
           </p>
         </div>
 
