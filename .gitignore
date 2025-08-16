@@ -1,0 +1,42 @@
+# Node/Bun dependencies
+node_modules/
+bun.lockb
+
+# Build output
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+**/.env.*
+**/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+
+# Tesseract OCR cache
+.tesseract_cache/
+mangoAI-backend/eng.traineddata
+
+# Uploads and temp files
+uploads/
+*.tmp
+
+# Misc
+*.log
+
+# Ignore test data
+/test/data/
+
+meeting-example.txt
