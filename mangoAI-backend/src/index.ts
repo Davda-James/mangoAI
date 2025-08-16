@@ -64,8 +64,11 @@ app.post("/api/summarize", async (req, res) => {
 });
 
 
-// Set up multer for file uploads
-const upload = multer({ dest: "uploads/" });
+// Set up multer for file uploads with 10 MB file size limit
+const upload = multer({
+	dest: "uploads/",
+	limits: { fileSize: 10 * 1024 * 1024 } // 10 MB
+});
 
 app.post("/api/upload", upload.single("file"), async (req, res) => {
 	if (!req.file) {
@@ -101,18 +104,22 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
 app.post("/api/send-email", async (req, res) => {
 	const { subject, recipients, html, summary } = req.body;
+	const MAX_RECIPIENTS = 10;
 	if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
 		return res.status(400).json({ error: "At least one recipient is required." });
 	}
+	if (recipients.length > MAX_RECIPIENTS) {
+		return res.status(400).json({ error: `You can send to a maximum of ${MAX_RECIPIENTS} recipients at once.` });
+	}
 	const emailSubject = subject || "Your AI Meeting Summary";
 	// Prefer html, fallback to summary (Markdown)
-		let emailHtml = html;
-		if (!emailHtml && summary) {
-			// Convert Markdown summary to HTML for beautiful email formatting
-			emailHtml = marked.parse(summary);
-		}
-		// Elegant, branded wrapper with timestamp
-		const sentAt = new Date().toLocaleString();
+	let emailHtml = html;
+	if (!emailHtml && summary) {
+		// Convert Markdown summary to HTML for beautiful email formatting
+		emailHtml = marked.parse(summary);
+	}
+	// Elegant, branded wrapper with timestamp
+	const sentAt = new Date().toLocaleString();
 		const htmlContent = `
 			<div style="font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6fb; padding: 32px;">
 				<div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #0001; padding: 32px;">
