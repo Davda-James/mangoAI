@@ -8,19 +8,21 @@ import pdfParse from "pdf-parse";
 import  { Resend } from 'resend';
 import Tesseract from "tesseract.js";
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
 import { exit } from "process";
+import { InferenceClient } from "@huggingface/inference";
+import { createGunzip } from "zlib";
+
 dotenv.config();
 
 const PORT = Number(process.env.PORT) || 3001;
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-// new gemini client 
-if(!GEMINI_API_KEY) {
-    console.error("Gemini API key not set in environment.");
-    exit(1);
+//  Using hugging face inference endpoints
+const HF_TOKEN = process.env.HF_TOKEN
+if(!HF_TOKEN) {
+	console.error("Hugging Face API key not set in environment.");
+	exit(1);
 }
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const client = new InferenceClient(HF_TOKEN)
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 // resend instance 
@@ -52,16 +54,43 @@ app.post("/api/summarize", async (req, res) => {
 		return res.status(400).json({ error: "Transcript and instruction are required." });
 	}
 	try {
-		if (!GEMINI_API_KEY) {
-			return res.status(500).json({ error: "Gemini API key not set in environment." });
+		if (!HF_TOKEN) {
+			return res.status(500).json({ error: "Hugging Face API key not set in environment." });
 		}
-	const prompt = `You are an expert meeting assistant. Your task is to generate a clear, concise, and professional summary of the following meeting transcript.\n\n**Instructions:**\n- Always format your output in Markdown.\n- Use appropriate Markdown headings, bullet points, and bold for names or key items.\n- Clearly separate sections such as Key Decisions, Action Items (with owners and deadlines), Discussion Points, and Next Steps.\n- If the transcript is incomplete or contains errors, politely mention it.\n- Do not include any content outside the summary.\n- Follow any additional user instructions below.\n\n**User Instructions:** ${instruction}\n\n**Meeting Transcript:**\n${transcript}`;
-		const response = await ai.models.generateContent({
-			model: "gemini-2.5-flash",
-			contents: prompt
+		const prompt = `You are an expert meeting assistant. Your task is to generate a clear, concise, and professional summary of the following meeting transcript.
+
+			**Instructions:**
+			- Always format your output in Markdown.
+			- Use appropriate Markdown headings, bullet points, and bold for names or key items.
+			- Clearly separate sections such as Key Decisions, Action Items (with owners and deadlines), Discussion Points, and Next Steps.
+			- If the transcript is incomplete or contains errors, politely mention it.
+			- Do not include any content outside the summary.
+			- Follow any additional user instructions below.
+
+			**User Instructions:** ${instruction}
+
+			**Meeting Transcript:**
+			${transcript}`;
+
+		const chatCompletion = await client.chatCompletion({
+			provider: "nebius",
+			model: "google/gemma-2-2b-it",
+			messages: [
+				{
+					role: "user",
+					content: prompt,
+				},
+			],
 		});
-		const summary = response.text || "No summary generated.";
-		return res.json({ summary });
+		if(chatCompletion && chatCompletion.choices && chatCompletion.choices[0]){
+			const summary = chatCompletion.choices[0].message.content;
+			if (summary) {
+				return res.json({ summary: summary });
+			} 
+
+		} else {
+				return res.status(500).json({ error: "Failed to generate summary" });
+		}
 	} catch (err) {
 		const errorMsg = err instanceof Error ? err.message : String(err);
 		return res.status(500).json({ error: "Failed to generate summary", details: errorMsg });
